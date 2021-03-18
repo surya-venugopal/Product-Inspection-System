@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import io
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QInputDialog
@@ -8,7 +7,6 @@ from PyQt5.QtGui import QImage
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QTimer
 
-from PIL import Image, ImageDraw, ImageFont
 
 import os
 import shutil
@@ -17,6 +15,106 @@ import sqlite3
 import pandas as pd
 
 from datetime import datetime
+import time
+
+
+class MyApp(QWidget):
+
+    date = datetime.today().strftime("%b-%d-%Y")
+
+    def __init__(self):
+        super().__init__()
+
+        self.initUI()
+
+    def initUI(self):
+
+        lbls = QLabel('Start date')
+        lble = QLabel('End date')
+
+        self.dateedits = QDateEdit(self)
+        self.dateedits.setDate(QDate.currentDate())
+        self.dateedite = QDateEdit(self)
+        self.dateedite.setDate(QDate.currentDate())
+        button = QPushButton("Download", self)
+        button.clicked.connect(self.download)
+        # dateecliit.setMinimumDate(Q
+        # Date(1900, 1, 1))
+        # dateedit.setMaximumDate(QDate(2100, 12, 31))
+        # dateedit.setDateRange(QDate(1900, 1, 1), QDate(2100, 12, 31))
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(lbls)
+        vbox.addWidget(self.dateedits)
+        vbox.addWidget(lble)
+        vbox.addWidget(self.dateedite)
+        vbox.addStretch()
+        vbox.addWidget(button)
+
+        self.setLayout(vbox)
+
+        self.setWindowTitle('QDateEdit')
+        self.setGeometry(300, 300, 300, 200)
+        self.show()
+
+    def download(self):
+        dates = datetime.strptime(
+            self.dateedits.date().toString(Qt.ISODate), '%Y-%m-%d')
+        datee = datetime.strptime(
+            self.dateedite.date().toString(Qt.ISODate), '%Y-%m-%d')
+        if(datee > dates):
+            connection = sqlite3.connect("/home/pi/"+"ZF_Inspection.db")
+            try:
+                cursor = list(connection.execute('SELECT * FROM ZFInspection'))
+                cursor.reverse()
+            except:
+                QMessageBox.about(
+                    self, "Error", "No Inspection has been done till now.")
+                exit()
+
+            data = {'Date': [],
+                    'Model': [],
+                    'Order No': [],
+                    'Serial No': [],
+                    'Inspector Id': [],
+                    'Correct': [],
+                    'Wrong': []}
+            no_of_entries = 0
+            for row in cursor:
+                dbDate = datetime.strptime(str(row[0])[:10], "%Y-%m-%d")
+                if(dbDate >= dates and dbDate <= datee):
+                    no_of_entries += 1
+                    print(type(self.dateedits.date().toString(Qt.ISODate)))
+                    data['Date'].append(str(row[0])[:10])
+                    data['Model'].append(row[1])
+                    data['Order No'].append(row[2])
+                    data['Serial No'].append(row[3])
+                    data['Inspector Id'].append(row[4])
+                    data['Correct'].append(row[5])
+                    data['Wrong'].append(row[6])
+            if(no_of_entries > 0):
+                # excel = pd.ExcelWriter('ZF_Inspection_{}.xlsx'.format(self.date))
+                df = pd.DataFrame(data)
+                df.to_excel(
+                    '/home/zf_admin/Desktop/ZF_Inspection_{}.xlsx'.format(self.date), index=False)
+                try:
+                    df.to_excel(
+                        '/home/zf_admin/Desktop/ZF_Inspection_{}.xlsx'.format(self.date), index=False)
+                except:
+                    QMessageBox.about(
+                        self, "Error", "Please close the excel file and try again.")
+                    exit()
+
+                QMessageBox.about(
+                    self, "Download", "The Report has been downloaded successfully.")
+                exit()
+            else:
+                QMessageBox.about(
+                    self, "Error", "No entries found !")
+
+        else:
+            QMessageBox.about(
+                self, "Error", "Select a valid End Date.")
 
 
 class Ui_Form(object):
@@ -30,7 +128,6 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
         Form.setSizePolicy(sizePolicy)
-
         self.menubar = QtWidgets.QMenuBar(Form)
         self.FileMenu = self.menubar.addMenu("File")
 
@@ -356,55 +453,13 @@ class MainWindow(QWidget):
     def downloadExcel(self):
         if(self.attempt < 4):
             password, result = QInputDialog.getText(
-                self, "Password", "Enter Password : (attempt : {})".format(self.attempt), QLineEdit.Password)
+                self, "Password", "Enter Password : (attempt : {})".format(self.attempt))
             if(result == True):
                 self.attempt += 1
-                if(password == "adminzf"):
+                if(password == "surya"):
+                    self.w = MyApp()
+                    self.w.show()
 
-                    try:
-                        connection = sqlite3.connect(
-                            "/home/pi/"+"ZF_Inspection.db")
-                        cursor = list(connection.execute(
-                            'SELECT * FROM ZFInspection'))
-                        cursor.reverse()
-                    except:
-                        QMessageBox.about(
-                            self, "Error", "No Inspection has been done till now.")
-                        exit()
-
-                    data = {'Date': [],
-                            'Model': [],
-                            'Order No': [],
-                            'Serial No': [],
-                            'Inspector Id': [],
-                            'Correct': [],
-                            'Wrong': []}
-                    for row in cursor:
-                        data['Date'].append(str(row[0])[:10])
-                        data['Model'].append(row[1])
-                        data['Order No'].append(row[2])
-                        data['Serial No'].append(row[3])
-                        data['Inspector Id'].append(row[4])
-                        data['Correct'].append(row[5])
-                        data['Wrong'].append(row[6])
-
-                    # excel = pd.ExcelWriter('ZF_Inspection_{}.xlsx'.format(self.date))
-                    df = pd.DataFrame(data)
-                    df.to_excel(
-                        '/home/zf_admin/Desktop/ZF_Inspection_{}.xlsx'.format(self.date), index=False)
-                    try:
-                        df.to_excel(
-                            '/home/zf_admin/Desktop/ZF_Inspection_{}.xlsx'.format(self.date), index=False)
-                    except:
-                        QMessageBox.about(
-                            self, "Error", "Please close the excel file and try again.")
-                        self.camera.exit()
-                        exit()
-
-                    QMessageBox.about(
-                        self, "Download", "The Report has been downloaded successfully.")
-                    self.camera.exit()
-                    exit()
                 else:
                     self.downloadExcel()
         else:
@@ -466,11 +521,11 @@ class MainWindow(QWidget):
         self.isCaptured = False
 
 
-splash = QSplashScreen(QPixmap('/home/zf_admin/ZF_splash.jpg'))
-splash.show()
-QTimer.singleShot(2000, splash.close)
-
 if __name__ == '__main__':
+    splash = QSplashScreen(QPixmap('/home/pi/ZF_splash.jpg'))
+    splash.show()
+    QTimer.singleShot(2500, splash.close)
+    time.sleep(3)
     app = QApplication(sys.argv)
 
     mainWindow = MainWindow()

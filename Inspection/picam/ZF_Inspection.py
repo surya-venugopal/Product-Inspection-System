@@ -10,13 +10,10 @@ from PyQt5.QtCore import QTimer
 from datetime import datetime
 import os
 
-import io
-from PIL import Image, ImageDraw, ImageFont
-
 import cv2
-import pandas as pd
-import shutil
+
 import sqlite3
+import time
 
 
 class Ui_Form(object):
@@ -544,12 +541,12 @@ class MainWindow(QWidget):
                             path, dirs, files = next(os.walk(
                                 self.db_path_ins+"DB/{date}/{serialNo}".format(date=self.model, serialNo=self.serialNo)))
                             file_count1 = len(files)
-                            print(str(file_count1) + "------")
+
                             if(len(dirs) > 0):
                                 path, dirs, filesWrong = next(os.walk(
                                     self.db_path_ins+"DB/{date}/{serialNo}/Wrong".format(date=self.model, serialNo=self.serialNo, suff=self.suffix)))
                                 file_count1 += len(filesWrong)
-                            print(str(file_count1) + "------")
+
                             self.i = file_count1 + 1
                             self.ui.imageNo.setText(
                                 "Image no : " + str(self.i))
@@ -885,10 +882,13 @@ class MainWindow(QWidget):
         self.isCaptured = False
 
 
-splash = QSplashScreen(QPixmap('/home/pi/ZF_splash.jpg'))
-splash.show()
-QTimer.singleShot(2000, splash.close)
 if __name__ == '__main__':
+
+    splash = QSplashScreen(QPixmap('/home/pi/ZF_splash.jpg'))
+    splash.show()
+    QTimer.singleShot(2500, splash.close)
+    time.sleep(3)
+
     app = QApplication(sys.argv)
 
     mainWindow = MainWindow()
