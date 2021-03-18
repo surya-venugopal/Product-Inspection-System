@@ -2,10 +2,11 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QInputDialog
-from PyQt5.QtWidgets import QWidget, QMessageBox, QAction, QSplashScreen, QLineEdit
+from PyQt5.QtWidgets import QApplication, QInputDialog, QWidget, QMessageBox, QAction, QSplashScreen, QLabel, QDateEdit, QVBoxLayout, QPushButton, QLineEdit
 from PyQt5.QtGui import QImage
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QDate, Qt
 
 
 import os
@@ -453,10 +454,10 @@ class MainWindow(QWidget):
     def downloadExcel(self):
         if(self.attempt < 4):
             password, result = QInputDialog.getText(
-                self, "Password", "Enter Password : (attempt : {})".format(self.attempt))
+                self, "Password", "Enter Password : (attempt : {})".format(self.attempt), QLineEdit.Password)
             if(result == True):
                 self.attempt += 1
-                if(password == "surya"):
+                if(password == "adminzf"):
                     self.w = MyApp()
                     self.w.show()
 
@@ -464,7 +465,6 @@ class MainWindow(QWidget):
                     self.downloadExcel()
         else:
             QMessageBox.about(self, "Error", "Password Attempt Exceeded!!!")
-            self.camera.exit()
             exit()
 
     def showDialogModel(self):
