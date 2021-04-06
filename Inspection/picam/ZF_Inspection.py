@@ -14,6 +14,7 @@ import cv2
 
 import sqlite3
 import time
+import Encoder
 
 
 class Ui_Form(object):
@@ -400,6 +401,7 @@ class MainWindow(QWidget):
         self.ui.inspectorId.setVisible(False)
         self.ui.orderNo.setVisible(False)
         self.ui.model.setVisible(False)
+        self.ui.coordinates_preview.setVisible(False)
 
         self.ui.saveBt.clicked.connect(self.save)
         self.ui.errorBt.clicked.connect(self.wrong)
@@ -416,6 +418,12 @@ class MainWindow(QWidget):
         self.ui.setSerial.setVisible(False)
         self.ui.setModel.setVisible(False)
         self.ui.setInspector.setVisible(False)
+
+        self.encx = Encoder.Encoder(26, 20)
+        self.ency = Encoder.Encoder(19, 16)
+        self.encz = Encoder.Encoder(6, 12)
+        self.enca = Encoder.Encoder(11, 8)
+        self.encb = Encoder.Encoder(9, 25)
 
     def showDialogOrder(self):
         if(os.path.exists(
@@ -554,6 +562,34 @@ class MainWindow(QWidget):
                             pass
 
                     try:
+                        connection = sqlite3.connect(
+                            "/home/pi/"+"ZF_Inspection.db")
+                        try:
+                            cursor = list(connection.execute(
+                                'SELECT * FROM {}'.format(self.model)))
+
+                        except:
+                            QMessageBox.about(
+                                self, "Error", "DataBase Error !")
+                            exit()
+                        self.data = {'i': [],
+                                     'x': [],
+                                     'y': [],
+                                     'z': [],
+                                     'a': [],
+                                     'b': []
+                                     }
+                        for row in cursor:
+
+                            self.data['i'].append(row[0])
+                            self.data['x'].append(row[1])
+                            self.data['y'].append(row[2])
+                            self.data['z'].append(row[3])
+                            self.data['a'].append(row[4])
+                            self.data['b'].append(row[5])
+                        self.ui.coordinates_master.setText(
+                            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.data['x'][self.i-1], y=self.data['y'][self.i-1], z=self.data['z'][self.i-1], a=self.data['a'][self.i-1], b=self.data['b'][self.i-1],))
+
                         self.actualImage = cv2.imread(
                             self.db_path_admin+"Master_DB/"+self.model+"/" + str(self.i)+".jpg")
                         self.actualImage = cv2.cvtColor(
@@ -574,6 +610,14 @@ class MainWindow(QWidget):
                 self.showDialogInspector()
         else:
             self.showDialogInspector()
+
+    def resetEncoder(self):
+
+        self.encx = Encoder.Encoder(26, 20)
+        self.ency = Encoder.Encoder(19, 16)
+        self.encz = Encoder.Encoder(6, 12)
+        self.enca = Encoder.Encoder(11, 8)
+        self.encb = Encoder.Encoder(9, 25)
 
     def capture(self):
         #         try:
@@ -611,6 +655,9 @@ class MainWindow(QWidget):
         #         self.image.load()
         #         w, h = self.image.size
         #         self.image = self.image.tobytes('raw', 'RGB')
+
+        self.ui.coordinates_preview.setText(
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
 
         _, self.image = self.cap.read()
         self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
@@ -749,6 +796,15 @@ class MainWindow(QWidget):
                 connection.commit()
                 connection.close()
 
+                self.ui.coordinates_master.setText(
+                    "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.data['x'][self.i-1], y=self.data['y'][self.i-1], z=self.data['z'][self.i-1], a=self.data['a'][self.i-1], b=self.data['b'][self.i-1],))
+                if(self.data['x'][self.i-1] == 0 and self.data['y'][self.i-1] == 0 and self.data['z'][self.i-1] == 0 and self.data['a'][self.i-1] == 0 and self.data['b'][self.i-1] == 0):
+                    self.ui.coordinates_preview.setVisible(False)
+
+                if(self.i-1 != 0):
+                    if(self.data['x'][self.i-2] == 0 and self.data['y'][self.i-2] == 0 and self.data['z'][self.i-2] == 0 and self.data['a'][self.i-2] == 0 and self.data['b'][self.i-2] == 0):
+                        self.resetEncoder()
+                        self.ui.coordinates_preview.setVisible(True)
                 self.actualImage = cv2.imread(
                     self.db_path_admin+"Master_DB/"+self.model+"/" + str(self.i)+".jpg")
                 self.actualImage = cv2.cvtColor(
@@ -860,6 +916,15 @@ class MainWindow(QWidget):
                             'UPDATE ZFInspection SET Correct=? WHERE Order_No=? and Serial_No=? and Inspector_Id=?', (self.correctCount, self.orderNo, self.serialNo, self.inspectorId))
                 connection.commit()
                 connection.close()
+
+                self.ui.coordinates_master.setText(
+                    "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.data['x'][self.i-1], y=self.data['y'][self.i-1], z=self.data['z'][self.i-1], a=self.data['a'][self.i-1], b=self.data['b'][self.i-1],))
+                if(self.data['x'][self.i-1] == 0 and self.data['y'][self.i-1] == 0 and self.data['z'][self.i-1] == 0 and self.data['a'][self.i-1] == 0 and self.data['b'][self.i-1] == 0):
+                    self.ui.coordinates_preview.setVisible(False)
+                if(self.i-1 != 0):
+                    if(self.data['x'][self.i-2] == 0 and self.data['y'][self.i-2] == 0 and self.data['z'][self.i-2] == 0 and self.data['a'][self.i-2] == 0 and self.data['b'][self.i-2] == 0):
+                        self.resetEncoder()
+                        self.ui.coordinates_preview.setVisible(True)
 
                 self.actualImage = cv2.imread(
                     self.db_path_admin+"Master_DB/"+self.model+"/" + str(self.i)+".jpg")

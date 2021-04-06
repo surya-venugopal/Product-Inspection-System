@@ -17,6 +17,7 @@ import pandas as pd
 
 from datetime import datetime
 import time
+import Encoder
 
 
 class MyApp(QWidget):
@@ -134,7 +135,6 @@ class Ui_Form(object):
 
         self.downloadExcel = QAction("Download Excel")
         self.FileMenu.addAction(self.downloadExcel)
-
         self.horizontalLayout = QtWidgets.QHBoxLayout(Form)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.line_3 = QtWidgets.QFrame(Form)
@@ -279,22 +279,6 @@ class Ui_Form(object):
         self.captureBt.setFont(font)
         self.captureBt.setObjectName("captureBt")
         self.verticalLayout_4.addWidget(self.captureBt)
-        self.retakeBt = QtWidgets.QPushButton(Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.retakeBt.sizePolicy().hasHeightForWidth())
-        self.retakeBt.setSizePolicy(sizePolicy)
-        font = QtGui.QFont()
-        font.setFamily("Comic Sans MS")
-        font.setPointSize(12)
-        font.setBold(False)
-        font.setWeight(50)
-        self.retakeBt.setFont(font)
-        self.retakeBt.setObjectName("retakeBt")
-        self.verticalLayout_4.addWidget(self.retakeBt)
         self.saveBt = QtWidgets.QPushButton(Form)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
@@ -311,6 +295,22 @@ class Ui_Form(object):
         self.saveBt.setFont(font)
         self.saveBt.setObjectName("saveBt")
         self.verticalLayout_4.addWidget(self.saveBt)
+        self.resetEn = QtWidgets.QPushButton(Form)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(
+            self.resetEn.sizePolicy().hasHeightForWidth())
+        self.resetEn.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setFamily("Comic Sans MS")
+        font.setPointSize(12)
+        font.setBold(False)
+        font.setWeight(50)
+        self.resetEn.setFont(font)
+        self.resetEn.setObjectName("resetEn")
+        self.verticalLayout_4.addWidget(self.resetEn)
         self.closeBt = QtWidgets.QPushButton(Form)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
@@ -349,8 +349,8 @@ class Ui_Form(object):
             "Form", "X :          Y :          Z :          A :          B :          C :."))
         self.setModel.setText(_translate("Form", "Set Model"))
         self.captureBt.setText(_translate("Form", "Capture"))
-        self.retakeBt.setText(_translate("Form", "Re Capture"))
         self.saveBt.setText(_translate("Form", "Save and next"))
+        self.resetEn.setText(_translate("Form", "Reset Encoder"))
         self.closeBt.setText(_translate("Form", "Close"))
 
 
@@ -392,16 +392,22 @@ class MainWindow(QWidget):
 
         self.ui.modelNo.setVisible(False)
         self.ui.captureBt.setVisible(False)
-        self.ui.retakeBt.setVisible(False)
+        self.ui.resetEn.setVisible(False)
         self.ui.saveBt.setVisible(False)
         self.ui.closeBt.setVisible(False)
 
         self.ui.setModel.clicked.connect(self.showDialogModel)
         self.ui.saveBt.clicked.connect(self.save)
-        self.ui.retakeBt.clicked.connect(self.retake)
+        self.ui.resetEn.clicked.connect(self.resetEncoder)
         self.ui.captureBt.clicked.connect(self.capture)
         self.ui.closeBt.clicked.connect(self.close)
         self.ui.downloadExcel.triggered.connect(self.downloadExcel)
+
+        self.encx = Encoder.Encoder(26, 20)
+        self.ency = Encoder.Encoder(19, 16)
+        self.encz = Encoder.Encoder(6, 12)
+        self.enca = Encoder.Encoder(11, 8)
+        self.encb = Encoder.Encoder(9, 25)
 
     def capture(self):
         #         try:
@@ -419,6 +425,9 @@ class MainWindow(QWidget):
         #         self.realImage = cv2.imread("/tmp/camCapture.jpg")
         #         self.imageV = cv2.cvtColor(self.imageV, cv2.COLOR_RGB2BGR)
         #         self.imageV = cv2.resize(self.imageV,(int(self.screenWidth *0.4),int(self.screenHeight*0.4)))
+        self.ui.coordinates_captured.setText(
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
+
         height, width, channel = self.imageV.shape
         step = channel * width
         qImg = QImage(self.imageV.data, width, height,
@@ -435,6 +444,9 @@ class MainWindow(QWidget):
         #         self.image.load()
         #         w, h = self.image.size
         #         self.image = self.image.tobytes('raw', 'RGB')
+
+        self.ui.coordinates_preview.setText(
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
 
         _, self.image = self.cap.read()
         self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
@@ -495,10 +507,17 @@ class MainWindow(QWidget):
             self.ui.captureBt.setText("Start")
 
     def save(self):
+        connection = sqlite3.connect("/home/pi/"+"ZF_Inspection.db")
         if self.isCaptured:
             if(self.i == 1 and os.path.exists(
                     self.path+"Master_DB/"+self.model+"/")):
                 shutil.rmtree(self.path+"Master_DB/"+self.model+"/")
+                try:
+                    connection.execute(
+                        'DELETE from {}'.format(self.model))
+                except:
+                    pass
+
             if(os.path.exists(
                     self.path+"Master_DB/"+self.model+"/")):
                 pass
@@ -511,14 +530,32 @@ class MainWindow(QWidget):
                 os.mkdir(self.path+"Master_DB/"+self.model+"/")
             cv2.imwrite(self.path+"Master_DB/"+self.model+"/" +
                         str(self.i)+".jpg", self.capturedImage)
+
+            try:
+                connection.execute(
+                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx, self.ency, self.encz, self.enca, self.encb))
+
+            except:
+                connection.execute(
+                    'CREATE TABLE {} (i int,x int,y int,z int,a int,b int)'.format(self.model))
+                connection.execute(
+                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx, self.ency, self.encz, self.enca, self.encb))
+            connection.commit()
+            connection.close()
+
             self.i += 1
             self.ui.imageNo.setText("Image no : " + str(self.i))
             self.ui.capturedImage.setText("Captured Image will appear here.")
             self.isCaptured = False
+            self.ui.coordinates_captured.setText(" ")
 
-    def retake(self):
-        self.ui.capturedImage.setText("Captured Image will appear here.")
-        self.isCaptured = False
+    def resetEncoder(self):
+        self.ui.coordinates_captured.setText(" ")
+        self.encx = Encoder.Encoder(26, 20)
+        self.ency = Encoder.Encoder(19, 16)
+        self.encz = Encoder.Encoder(6, 12)
+        self.enca = Encoder.Encoder(11, 8)
+        self.encb = Encoder.Encoder(9, 25)
 
 
 if __name__ == '__main__':
