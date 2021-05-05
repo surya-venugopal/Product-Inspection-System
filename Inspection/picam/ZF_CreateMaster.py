@@ -20,6 +20,7 @@ import time
 import Encoder
 
 
+
 class MyApp(QWidget):
 
     date = datetime.today().strftime("%b-%d-%Y")
@@ -55,7 +56,7 @@ class MyApp(QWidget):
 
         self.setLayout(vbox)
 
-        self.setWindowTitle('QDateEdit')
+        self.setWindowTitle('Choose Date')
         self.setGeometry(300, 300, 300, 200)
         self.show()
 
@@ -340,7 +341,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Cam view"))
+        Form.setWindowTitle(_translate("Form", "ZF Admin"))
         self.cameraPreview.setText(_translate("Form", "Camera Preview"))
         self.coordinates_preview.setText(_translate(
             "Form", "X :          Y :          Z :          A :          B :          C :"))
@@ -373,6 +374,7 @@ class MainWindow(QWidget):
 
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        
 
 #         self.camera = gp.Camera()
 #         #self.camera.init()
@@ -408,6 +410,12 @@ class MainWindow(QWidget):
         self.encz = Encoder.Encoder(6, 12)
         self.enca = Encoder.Encoder(11, 8)
         self.encb = Encoder.Encoder(9, 25)
+        
+        self.encxTemp = 0
+        self.encyTemp = 0
+        self.enczTemp = 0
+        self.encaTemp = 0
+        self.encbTemp = 0
 
     def capture(self):
         #         try:
@@ -426,7 +434,7 @@ class MainWindow(QWidget):
         #         self.imageV = cv2.cvtColor(self.imageV, cv2.COLOR_RGB2BGR)
         #         self.imageV = cv2.resize(self.imageV,(int(self.screenWidth *0.4),int(self.screenHeight*0.4)))
         self.ui.coordinates_captured.setText(
-            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read()-self.encxTemp, y=self.ency.read()-self.encyTemp, z=self.encz.read()-self.enczTemp, a=self.enca.read()-self.encaTemp, b=self.encb.read()-self.encbTemp,))
 
         height, width, channel = self.imageV.shape
         step = channel * width
@@ -446,7 +454,7 @@ class MainWindow(QWidget):
         #         self.image = self.image.tobytes('raw', 'RGB')
 
         self.ui.coordinates_preview.setText(
-            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read()-self.encxTemp, y=self.ency.read()-self.encyTemp, z=self.encz.read()-self.enczTemp, a=self.enca.read()-self.encaTemp, b=self.encb.read()-self.encbTemp))
 
         _, self.image = self.cap.read()
         self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
@@ -483,14 +491,14 @@ class MainWindow(QWidget):
         self.model, result = QInputDialog.getText(
             self, "Model", "Enter model : ")
         if(result == True):
-            self.model = self.model.upper()
+            self.model = self.model.upper().strip().replace(" ","_")
             if(len(self.model) > 0):
                 self.ui.setModel.setVisible(False)
                 self.ui.modelNo.setText("Model : " + self.model)
                 self.ui.modelNo.setVisible(True)
                 if(self.model != None):
                     self.ui.captureBt.setVisible(True)
-                    self.ui.retakeBt.setVisible(True)
+                    self.ui.resetEn.setVisible(True)
                     self.ui.saveBt.setVisible(True)
                     self.ui.closeBt.setVisible(True)
             else:
@@ -533,13 +541,13 @@ class MainWindow(QWidget):
 
             try:
                 connection.execute(
-                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx, self.ency, self.encz, self.enca, self.encb))
+                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx.read()-self.encxTemp, self.ency.read()-self.encyTemp,self.encz.read()-self.enczTemp,self.enca.read()-self.encaTemp,self.encb.read()-self.encbTemp))
 
             except:
                 connection.execute(
-                    'CREATE TABLE {} (i int,x int,y int,z int,a int,b int)'.format(self.model))
+                    ('CREATE TABLE {} (i int,x int,y int,z int,a int,b int)'.format(self.model)))
                 connection.execute(
-                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx, self.ency, self.encz, self.enca, self.encb))
+                    'INSERT INTO {} VALUES(?,?,?,?,?,?)'.format(self.model), (self.i, self.encx.read()-self.encxTemp, self.ency.read()-self.encyTemp,self.encz.read()-self.enczTemp,self.enca.read()-self.encaTemp,self.encb.read()-self.encbTemp))
             connection.commit()
             connection.close()
 
@@ -551,11 +559,11 @@ class MainWindow(QWidget):
 
     def resetEncoder(self):
         self.ui.coordinates_captured.setText(" ")
-        self.encx = Encoder.Encoder(26, 20)
-        self.ency = Encoder.Encoder(19, 16)
-        self.encz = Encoder.Encoder(6, 12)
-        self.enca = Encoder.Encoder(11, 8)
-        self.encb = Encoder.Encoder(9, 25)
+        self.encxTemp = self.encx.read()
+        self.encyTemp = self.ency.read()
+        self.enczTemp = self.encz.read()
+        self.encaTemp = self.enca.read()
+        self.encbTemp = self.encb.read()
 
 
 if __name__ == '__main__':

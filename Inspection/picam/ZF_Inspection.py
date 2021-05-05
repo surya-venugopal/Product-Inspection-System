@@ -424,12 +424,18 @@ class MainWindow(QWidget):
         self.encz = Encoder.Encoder(6, 12)
         self.enca = Encoder.Encoder(11, 8)
         self.encb = Encoder.Encoder(9, 25)
-
+        
+        self.encxTemp = 0
+        self.encyTemp = 0
+        self.enczTemp = 0
+        self.encaTemp = 0
+        self.encbTemp = 0
+        
     def showDialogOrder(self):
         if(os.path.exists(
                 self.db_path_admin+"Master_DB/")):
             models = [x[0] for x in os.walk(self.db_path_admin+"Master_DB/")]
-            print(models)
+            
             for i in range(len(models)):
                 if(i != 0):
                     self.models.append(models[i][len(self.db_path_admin)+10:])
@@ -442,6 +448,7 @@ class MainWindow(QWidget):
             self, "Barcode", "Scan the barcode : ")
         if(result == True):
             if(len(value) > 0):
+                value = value.upper()
                 self.orderNo = value[value.index("ZM"):]
                 self.orderNo = self.orderNo.upper()
                 self.ui.setOrder.setVisible(False)
@@ -449,7 +456,7 @@ class MainWindow(QWidget):
                 self.ui.orderNo.setVisible(True)
 
                 self.model = value[:value.index("ZM")]
-                self.model = self.model.upper()
+                self.model = self.model.upper().strip().replace(" ","_")
                 self.ui.setModel.setVisible(False)
                 self.ui.model.setText("Model : " + self.model)
                 self.ui.model.setVisible(True)
@@ -521,7 +528,7 @@ class MainWindow(QWidget):
                                         path, dirs, filesWrong = next(os.walk(
                                             self.db_path_ins+"DB/{date}/{serialNo}_{suff}/Wrong".format(date=self.model, serialNo=self.serialNo, suff=self.suffix)))
                                         file_count1 += len(filesWrong)
-                                    print(str(file_count1)+"\\\\\\\\\\\\\\")
+                                    
                                 else:
                                     path, dirs, files = next(os.walk(
                                         self.db_path_ins+"DB/{date}/{serialNo}".format(date=self.model, serialNo=self.serialNo)))
@@ -530,7 +537,7 @@ class MainWindow(QWidget):
                                         path, dirs, filesWrong = next(os.walk(
                                             self.db_path_ins+"DB/{date}/{serialNo}_{suff}/Wrong".format(date=self.model, serialNo=self.serialNo, suff=self.suffix)))
                                         file_count1 += len(filesWrong)
-                                    print(str(file_count1)+"///////")
+                                    
 
                                 if(file_count1 == file_count2):
                                     self.suffix += 1
@@ -544,7 +551,7 @@ class MainWindow(QWidget):
                                     "_"+str(self.suffix)
                                 break
 
-                        print(self.serialNo)
+                        
                         try:
                             path, dirs, files = next(os.walk(
                                 self.db_path_ins+"DB/{date}/{serialNo}".format(date=self.model, serialNo=self.serialNo)))
@@ -612,30 +619,13 @@ class MainWindow(QWidget):
             self.showDialogInspector()
 
     def resetEncoder(self):
-
-        self.encx = Encoder.Encoder(26, 20)
-        self.ency = Encoder.Encoder(19, 16)
-        self.encz = Encoder.Encoder(6, 12)
-        self.enca = Encoder.Encoder(11, 8)
-        self.encb = Encoder.Encoder(9, 25)
+        self.encxTemp = self.encx.read()
+        self.encyTemp = self.ency.read()
+        self.enczTemp = self.encz.read()
+        self.encaTemp = self.enca.read()
+        self.encbTemp = self.encb.read()
 
     def capture(self):
-        #         try:
-        #             file_path = self.camera.capture(gp.GP_CAPTURE_IMAGE)
-        #         except:
-        #             QMessageBox.about(
-        #                 self, "Error", "Please switch to Manual Mode")
-        #             self.camera.exit()
-        #             exit()
-        #         target = os.path.join('/tmp/', 'camCapture1.jpg')
-        #         camera_file = self.camera.file_get(
-        #                 file_path.folder, file_path.name, gp.GP_FILE_TYPE_NORMAL)
-        #         camera_file.save(target)
-        #
-        #         self.imageV = cv2.imread("/tmp/camCapture1.jpg")
-        #         self.realImage = cv2.imread("/tmp/camCapture1.jpg")
-        #         self.imageV = cv2.cvtColor(self.imageV, cv2.COLOR_RGB2BGR)
-        #         self.imageV = cv2.resize(self.imageV,(int(self.screenWidth *0.25),int(self.screenHeight*0.25)))
         height, width, channel = self.imageV.shape
         step = channel * width
 
@@ -649,15 +639,8 @@ class MainWindow(QWidget):
 
     def viewCam(self):
 
-        #         OK, camera_file = gp.gp_camera_capture_preview(self.camera)
-        #         file_data = camera_file.get_data_and_size()
-        #         self.image = Image.open(io.BytesIO(file_data))
-        #         self.image.load()
-        #         w, h = self.image.size
-        #         self.image = self.image.tobytes('raw', 'RGB')
-
         self.ui.coordinates_preview.setText(
-            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read(), y=self.ency.read(), z=self.encz.read(), a=self.enca.read(), b=self.encb.read(),))
+            "X : {x}\tY : {y}\tZ : {b}\tA : {a}\tB : {b}".format(x=self.encx.read()-self.encxTemp, y=self.ency.read()-self.encyTemp, z=self.encz.read()-self.enczTemp, a=self.enca.read()-self.encaTemp, b=self.encb.read()-self.encbTemp))
 
         _, self.image = self.cap.read()
         self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
